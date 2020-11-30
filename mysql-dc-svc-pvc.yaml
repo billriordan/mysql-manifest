@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bill-mysql
+  namespace: bill-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bill-mysql
+  template:
+    metadata:
+      labels:
+        app: bill-mysql
+    spec:
+      volumes:
+      - name: mysql-data
+        persistentVolumeClaim:
+          claimName: mysql-data-pvc
+      containers:
+      - name: bill-mysql
+        image: mysql:5.6
+        imagePullPolicy: Always
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: MYSQL_ROOT_PASSWORD
+              name: mysql-pass
+        ports:
+        - containerPort: 3306
+          protocol: TCP
+        volumeMounts:
+         - name: mysql-data
+           mountPath: /var/lib/mysql
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-data-pvc
+  namespace: bill-mysql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: bill-mysql-service
+  namespace: bill-mysql
+spec:
+  type: ClusterIP
+  ports:
+    - name: bill-mysql-port
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: bill-mysql
